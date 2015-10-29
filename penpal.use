@@ -1,0 +1,4 @@
+Name: penpal
+Description: Native DWG (AutoCad's format) ooc library
+SourcePath: source
+Imports: penpal/core
