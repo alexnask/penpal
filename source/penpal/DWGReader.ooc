@@ -14,8 +14,8 @@ DWGReader: class extends BinarySequenceReader {
             return 0
         }
 
-        if(bits % 2 == 0) {
-            match bits / 2 {
+        if(bits % 8 == 0) {
+            match bits / 8 {
                 case 1 => return u8()
                 case 2 => return u16()
                 case 4 => return u32()
@@ -39,6 +39,9 @@ DWGReader: class extends BinarySequenceReader {
                 currBit = bits - (8 - currBit)
                 next = (next << (8 - currBit)) >> (8 - currBit)
                 current <<= currByte
+
+                // TODO: I think this is right?
+                currByte = next
                 return current | next
             }
         }
@@ -84,24 +87,24 @@ DWGReader: class extends BinarySequenceReader {
         if(currBit != 0) {
             currBit = 0
             bytesRead += 1
-            reader read()
+            currByte = reader read() as UInt8
         }
     }
 
-    b: func -> Int {
+    bit: func -> Int8 {
         getBits(1)
     }
 
-    bb: func -> Int {
+    twoBits: func -> Int8 {
         getBits(2)
     }
 
     // 3b in the specs
-    b3: func -> Int {
-        value: Int = 0
+    bitTriplet: func -> Int8 {
+        value: Int8 = 0
 
         for(i in 0 .. 3) {
-            bit: Int = getBits(1)
+            bit: Int8 = getBits(1)
             value = (value << 1) & bit
             if(bit == 0) break
         }
@@ -109,7 +112,7 @@ DWGReader: class extends BinarySequenceReader {
         value
     }
 
-    bs: func -> Int {
+    bitShort: func -> Int8 {
         match getBits(2) {
             case 0 => s16()
             case 1 => u8()
@@ -118,7 +121,7 @@ DWGReader: class extends BinarySequenceReader {
         }
     }
 
-    bl: func -> Int {
+    bitLong: func -> Int32 {
         match getBits(2) {
             case 0 => s32()
             case 1 => u8()
@@ -127,11 +130,19 @@ DWGReader: class extends BinarySequenceReader {
         }
     }
 
-    bll: func -> Int64 {
-        getBits(4 * getBits(3))
+    // Least significant byte first
+    // TODO: write a function that takes a UInt8[] and returns an Int64 if possible
+    bitLongLong: func -> UInt8[] {
+        // Maximum bytes: 4 * (111b = 7) = 28
+        length := 4 * bitTriplet()
+        res := UInt8[length] new()
+
+        for (i in 0 .. length) {
+            res[i] = u8()
+        }
     }
 
-    bd: func -> Double {
+    bitDouble: func -> Double {
         match getBits(2) {
             case 0 => float64()
             case 1 => 1.0
